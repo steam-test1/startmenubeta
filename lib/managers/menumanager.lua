@@ -1159,10 +1159,10 @@ function MenuCallbackHandler:is_not_trial()
 	return not self:is_trial()
 end
 function MenuCallbackHandler:has_preorder()
-	return managers.dlc:has_preorder()
+	return managers.dlc:is_dlc_unlocked("preorder")
 end
 function MenuCallbackHandler:not_has_preorder()
-	return not managers.dlc:has_preorder()
+	return not managers.dlc:is_dlc_unlocked("preorder")
 end
 function MenuCallbackHandler:has_all_dlcs()
 	return true
@@ -1232,24 +1232,12 @@ function MenuCallbackHandler:is_dlc_latest_locked(check_dlc)
 		"armored_transport"
 	}
 	local dlc_tweak_data = tweak_data.dlc
+	local has_dlc
 	for _, dlc in ipairs(dlcs) do
-		if dlc_tweak_data[dlc] then
-			local dlc_func = dlc_tweak_data[dlc].dlc
-			if dlc_tweak_data[dlc].free then
-				return false
-			elseif dlc_func then
-				if not managers.dlc[dlc_func](managers.dlc, dlc_tweak_data[dlc]) then
-					return dlc == check_dlc
-				end
-			else
-				Application:error("[is_dlc_lastest_locked] DLC do not have a dlc check function tweak_data_dlc.dlc", dlc)
-			end
-			if dlc == check_dlc then
-			else
-				else
-					Application:error("[is_dlc_lastest_locked] DLC do not exist in dlc tweak data", dlc)
-				end
-			end
+		has_dlc = managers.dlc:is_dlc_unlocked(dlc)
+		if not has_dlc then
+			return dlc == check_dlc
+		end
 	end
 	return false
 end
@@ -1339,18 +1327,6 @@ function MenuCallbackHandler:visible_callback_pal()
 end
 function MenuCallbackHandler:not_has_all_dlcs()
 	return not self:has_all_dlcs()
-end
-function MenuCallbackHandler:has_armored_transport()
-	return managers.dlc:has_armored_transport()
-end
-function MenuCallbackHandler:not_has_armored_transport()
-	return not self:has_armored_transport()
-end
-function MenuCallbackHandler:has_gage_pack()
-	return managers.dlc:has_gage_pack()
-end
-function MenuCallbackHandler:not_has_gage_pack()
-	return not self:has_gage_pack()
 end
 function MenuCallbackHandler:reputation_check(data)
 	return managers.experience:current_level() >= data:value()
@@ -2155,7 +2131,7 @@ function MenuCallbackHandler:play_safehouse(params)
 	end
 	managers.menu:show_play_safehouse_question({yes_func = yes_func})
 end
-function MenuCallbackHandler:_increase_infamous()
+function MenuCallbackHandler:_increase_infamous(yes_clbk)
 	managers.menu_scene:destroy_infamy_card()
 	if managers.experience:current_level() < 100 or managers.experience:current_rank() >= #tweak_data.infamy.ranks then
 		return
@@ -2180,7 +2156,10 @@ function MenuCallbackHandler:_increase_infamous()
 	end
 	managers.savefile:save_progress()
 	managers.savefile:save_setting(true)
-	self._sound_source:post_event("infamous_player_join_stinger")
+	managers.menu:post_event("infamous_player_join_stinger")
+	if yes_clbk then
+		yes_clbk()
+	end
 	if SystemInfo:platform() == Idstring("WIN32") then
 		managers.statistics:publish_level_to_steam()
 	end
@@ -2190,6 +2169,8 @@ function MenuCallbackHandler:become_infamous(params)
 		return
 	end
 	local infamous_cost = Application:digest_value(tweak_data.infamy.ranks[managers.experience:current_rank() + 1], false)
+	local yes_clbk = params and params.yes_clbk or false
+	local no_clbk = params and params.no_clbk
 	local params = {}
 	params.cost = managers.experience:cash_string(infamous_cost)
 	params.free = infamous_cost == 0
@@ -2198,11 +2179,16 @@ function MenuCallbackHandler:become_infamous(params)
 			local rank = managers.experience:current_rank() + 1
 			managers.menu:open_node("blackmarket_preview_node", {
 				{
-					back_callback = callback(self, self, "_increase_infamous")
+					back_callback = callback(MenuCallbackHandler, MenuCallbackHandler, "_increase_infamous", yes_clbk)
 				}
 			})
+			managers.menu:post_event("infamous_stinger_level_" .. (rank < 10 and "0" or "") .. tostring(rank))
 			managers.menu_scene:spawn_infamy_card(rank)
-			self._sound_source:post_event("infamous_stinger_level_" .. (rank < 10 and "0" or "") .. tostring(rank))
+		end
+	end
+	function params.no_func()
+		if no_clbk then
+			no_clbk()
 		end
 	end
 	managers.menu:show_confirm_become_infamous(params)
@@ -6924,25 +6910,20 @@ function MenuCallbackHandler:mod_option_toggle_enabled(item)
 end
 MenuCrimeNetChallengeInitiator = MenuCrimeNetChallengeInitiator or class(MenuCrimeNetGageAssignmentInitiator)
 function MenuCrimeNetChallengeInitiator:modify_node(original_node, data)
-	local node = self:setup_node(original_node)
-	if not managers.challenge:visited_crimenet() then
-		node:set_default_item_name("_introduction")
-		node:select_item("_introduction")
-		managers.menu:active_menu().logic:trigger_item(false, node:item("_introduction"))
-		managers.challenge:visit_crimenet()
-	else
-		node:set_default_item_name("_summary")
-		node:select_item("_summary")
-		managers.menu:active_menu().logic:trigger_item(false, node:item("_summary"))
+	local node, first_item = self:setup_node(original_node)
+	if first_item then
+		node:set_default_item_name(first_item)
+		node:select_item(first_item)
+		managers.menu:active_menu().logic:trigger_item(false, node:item(first_item))
 	end
 	return node
 end
 function MenuCrimeNetChallengeInitiator:refresh_node(node)
-	self:setup_node(node)
-	if not node:selected_item() or not node:item(node:selected_item():name()) then
-		node:set_default_item_name("_summary")
-		node:select_item("_summary")
-		managers.menu:active_menu().logic:trigger_item(false, node:item("_summary"))
+	local _, first_item = self:setup_node(node)
+	if (not node:selected_item() or not node:item(node:selected_item():name())) and first_item then
+		node:set_default_item_name(first_item)
+		node:select_item(first_item)
+		managers.menu:active_menu().logic:trigger_item(false, node:item(first_item))
 	end
 	return node
 end
@@ -6955,16 +6936,7 @@ function MenuCallbackHandler:is_current_challenge(item)
 end
 function MenuCrimeNetChallengeInitiator:setup_node(node)
 	node:clean_items()
-	self:create_divider(node, 1, managers.localization:text("menu_gage_assignment_div_menu"), nil, tweak_data.screen_colors.text)
-	self:create_item(node, {
-		id = "_introduction",
-		name_lozalized = managers.localization:text("menu_challenge_introduction_title")
-	})
-	self:create_item(node, {
-		id = "_summary",
-		name_lozalized = managers.localization:text("menu_challenge_summary_title")
-	})
-	self:create_divider(node, 2)
+	local first_item
 	if not managers.challenge:is_retrieving() and managers.challenge:is_validated() then
 		do
 			local challenges = {}
@@ -7025,6 +6997,7 @@ function MenuCrimeNetChallengeInitiator:setup_node(node)
 				end)
 				for assignment, data in ipairs(node_data) do
 					self:create_item(node, data)
+					first_item = first_item or data.id
 				end
 			end
 		end
@@ -7044,7 +7017,8 @@ function MenuCrimeNetChallengeInitiator:setup_node(node)
 	local data_node = {}
 	local new_item = node:create_item(data_node, params)
 	node:add_item(new_item)
-	return node
+	first_item = first_item or "back"
+	return node, first_item
 end
 function MenuCallbackHandler:update_challenge_menu_node()
 	if not managers.menu:active_menu() then

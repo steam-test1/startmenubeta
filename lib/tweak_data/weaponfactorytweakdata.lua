@@ -3176,15 +3176,16 @@ function WeaponFactoryTweakData:_init_m16()
 		}
 	}
 	self.wpn_fps_ass_m16.default_blueprint = {
-		"wpn_fps_m4_uupg_b_medium_vanilla",
 		"wpn_fps_m4_lower_reciever",
-		"wpn_fps_ass_m16_o_handle_sight",
 		"wpn_fps_m4_upper_reciever_round",
 		"wpn_fps_m4_uupg_draghandle",
-		"wpn_fps_m16_fg_standard",
-		"wpn_fps_m16_s_solid_vanilla",
 		"wpn_fps_upg_m4_m_straight_vanilla",
-		"wpn_fps_upg_m4_g_standard_vanilla"
+		"wpn_fps_upg_m4_g_standard_vanilla",
+		"wpn_fps_m16_fg_standard",
+		"wpn_fps_m4_uupg_b_medium_vanilla",
+		"wpn_fps_ass_m16_o_handle_sight",
+		"wpn_fps_m16_s_solid_vanilla",
+		"wpn_fps_m4_uupg_b_medium_vanilla"
 	}
 	self.wpn_fps_ass_m16.uses_parts = {
 		"wpn_fps_m16_fg_railed",
@@ -23545,7 +23546,9 @@ function WeaponFactoryTweakData:_init_par()
 		"wpn_fps_upg_fl_ass_peq15",
 		"wpn_fps_upg_fl_ass_laser",
 		"wpn_fps_upg_ass_ns_battle",
-		"wpn_fps_upg_fl_ass_utg"
+		"wpn_fps_upg_fl_ass_utg",
+		"wpn_fps_lmg_svinet_b_standard",
+		"wpn_fps_lmg_svinet_s_legend"
 	}
 	self.wpn_fps_lmg_par_npc = deep_clone(self.wpn_fps_lmg_par)
 	self.wpn_fps_lmg_par_npc.unit = "units/pd2_dlc_par/weapons/wpn_fps_lmg_par/wpn_fps_lmg_par_npc"
@@ -24298,6 +24301,28 @@ function WeaponFactoryTweakData:_init_legendary()
 	}
 	self.parts.wpn_fps_snp_model70_b_legend.third_unit = "units/payday2_cash/safes/bah/weapons/wpn_fps_snp_model70_legendary_pts/wpn_third_snp_model70_b_legend"
 	self.parts.wpn_fps_snp_model70_s_legend.third_unit = "units/payday2_cash/safes/bah/weapons/wpn_fps_snp_model70_legendary_pts/wpn_third_snp_model70_s_legend"
+	self.parts.wpn_fps_lmg_svinet_b_standard = {
+		type = "barrel",
+		name_id = "bm_wp_svinet_b_standard",
+		a_obj = "a_b",
+		unit = "units/payday2_cash/safes/pack/weapons/wpn_fps_lmg_ksp58_b_legendary/wpn_fps_lmg_svinet_b_standard",
+		stats = {
+			value = 1,
+			spread = 3,
+			recoil = 3
+		},
+		unatainable = true
+	}
+	self.parts.wpn_fps_lmg_svinet_s_legend = {
+		type = "stock",
+		name_id = "bm_wp_svinet_s_legend",
+		a_obj = "a_s",
+		unit = "units/payday2_cash/safes/pack/weapons/wpn_fps_lmg_ksp58_s_legendary/wpn_fps_lmg_svinet_s_legend",
+		stats = {value = 1},
+		unatainable = true
+	}
+	self.parts.wpn_fps_lmg_svinet_b_standard.third_unit = "units/payday2_cash/safes/pack/weapons/wpn_fps_lmg_ksp58_b_legendary/wpn_third_lmg_svinet_b_legend"
+	self.parts.wpn_fps_lmg_svinet_s_legend.third_unit = "units/payday2_cash/safes/pack/weapons/wpn_fps_lmg_ksp58_s_legendary/wpn_third_lmg_svinet_s_legend"
 end
 function WeaponFactoryTweakData:_init_cc_material_config()
 	local parts = self.parts
@@ -24311,8 +24336,12 @@ function WeaponFactoryTweakData:_init_cc_material_config()
 	parts.wpn_fps_pis_g18c_body_frame.thq_material_config = Idstring("units/payday2/weapons/wpn_fps_pis_g18c_pts/wpn_fps_pis_g18c_frame_thq")
 	parts.wpn_fps_pis_g18c_co_comp_2.material_config = Idstring("units/payday2/weapons/wpn_fps_pis_g18c_pts/wpn_fps_pis_g18c_comp_2")
 	parts.wpn_fps_pis_g18c_co_comp_2.thq_material_config = Idstring("units/payday2/weapons/wpn_fps_pis_g18c_pts/wpn_fps_pis_g18c_comp_2_thq")
+	parts.wpn_fps_pis_g18c_s_stock.material_config = Idstring("units/payday2/weapons/wpn_fps_pis_g18c_pts/wpn_fps_pis_g18c_stock")
+	parts.wpn_fps_pis_g18c_s_stock.thq_material_config = Idstring("units/payday2/weapons/wpn_fps_pis_g18c_pts/wpn_fps_pis_g18c_stock_thq")
 	parts.wpn_fps_upg_o_mbus_rear.material_config = Idstring("units/pd2_dlc_gage_shot/weapons/wpn_fps_upg_o_mbus/wpn_fps_upg_o_mbus_front")
 	parts.wpn_fps_upg_o_mbus_rear.thq_material_config = Idstring("units/pd2_dlc_gage_shot/weapons/wpn_fps_upg_o_mbus/wpn_fps_upg_o_mbus_front_thq")
+	parts.wpn_fps_aug_ris_special.material_config = Idstring("units/payday2/weapons/wpn_fps_ass_aug_pts/wpn_fps_aug_body_aug")
+	parts.wpn_fps_aug_ris_special.thq_material_config = Idstring("units/payday2/weapons/wpn_fps_ass_aug_pts/wpn_fps_aug_body_aug_thq")
 end
 function WeaponFactoryTweakData:_init_bipods()
 	self.parts.wpn_fps_upg_bp_lmg_lionbipod = {

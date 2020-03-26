@@ -210,7 +210,11 @@ function MenuNodeGui:_create_legends(node)
 	local res = RenderSettings.resolution
 	local visible = not managers.menu:is_pc_controller()
 	local is_pc = managers.menu:is_pc_controller()
+	if alive(self.ws:panel():child("legend_panel")) then
+		self.ws:panel():remove(self.ws:panel():child("legend_panel"))
+	end
 	self._legends_panel = self.ws:panel():panel({
+		name = "legend_panel",
 		visible = visible,
 		x = safe_rect_pixels.x,
 		y = safe_rect_pixels.y,
@@ -1503,9 +1507,10 @@ function MenuNodeMainGui:_setup_item_rows(node)
 			text = Application:version(),
 			font = tweak_data.menu.pd2_small_font,
 			font_size = tweak_data.menu.pd2_small_font_size,
-			align = SystemInfo:platform() == Idstring("WIN32") and "right" or "left",
+			align = SystemInfo:platform() == Idstring("WIN32") and "left" or "left",
 			vertical = "bottom",
 			alpha = 0.5
 		})
+		self._version_string:move(0, -100)
 	end
 end

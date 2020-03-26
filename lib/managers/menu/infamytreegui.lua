@@ -520,7 +520,7 @@ function InfamyTreeGui:_setup()
 	end
 	blur:animate(func)
 	self:_select_item(start_item)
-	if managers.experience:current_rank() == 0 then
+	if MenuCallbackHandler:can_become_infamous() or managers.experience:current_rank() == 0 then
 		managers.menu:show_infamous_message(MenuCallbackHandler:can_become_infamous() and managers.money:offshore() >= Application:digest_value(tweak_data.infamy.ranks[managers.experience:current_rank() + 1], false))
 	end
 	managers.features:announce_feature("infamy_2_0")
@@ -576,7 +576,7 @@ function InfamyTreeGui:_update_description(name, unlocked)
 					end
 				end
 			end
-			local _, infamous_base_chance, infamous_mod = managers.lootdrop:infamous_chance()
+			local _, infamous_base_chance, infamous_mod = managers.lootdrop:infamous_chance({disable_difficulty = true})
 			local infamous_chance = items_total > 0 and infamous_base_chance * (items_infamous / items_total) or 0
 			local mult = 10
 			local base_text = math.floor(infamous_chance * 100 * mult + 0.5) / mult

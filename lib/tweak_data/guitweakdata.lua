@@ -1610,15 +1610,6 @@ function GuiTweakData:init()
 			icon = "guis/textures/pd2/crimenet_marker_codex"
 		},
 		{
-			id = "challenge",
-			name_id = "menu_cn_challenge",
-			desc_id = "menu_cn_challenge_desc",
-			menu_node = "crimenet_contract_challenge",
-			x = 347,
-			y = 716,
-			icon = "guis/textures/pd2/crimenet_challenge"
-		},
-		{
 			id = "casino",
 			name_id = "menu_cn_casino",
 			desc_id = "menu_cn_casino_desc",
@@ -4642,4 +4633,1048 @@ function GuiTweakData:tradable_inventory_sort_index(name)
 		end
 	end
 	return 0
+end
+function GuiTweakData:get_main_menu_layout_by_name(name, ...)
+	if self._cached_layout and self._cached_layout[name] then
+		return unpack(self._cached_layout[name])
+	end
+	local layout = self[name]
+	local return_data = {
+		{},
+		{}
+	}
+	if layout then
+		local layout_type = type(layout)
+		if layout_type == "table" then
+			return_data = {
+				layout,
+				{}
+			}
+		elseif layout_type == "function" then
+			return_data = {
+				layout(...)
+			}
+		elseif layout_type == "string" then
+		end
+	end
+	self._cached_layout = self._cached_layout or {}
+	self._cached_layout[name] = return_data
+	return unpack(return_data)
+end
+function GuiTweakData.main_menu_layout_new_menu(panel_w, panel_h)
+	local mechanic_animation = function(o)
+		local parent_panel = o:parent()
+		local corner_left = 0 - parent_panel:w() * 0.03
+		local corner_right = -o:w() + parent_panel:w() * 1.03
+		local corner_top = 0 - parent_panel:w() * 0.03
+		local corner_bottom = -o:h() + parent_panel:h() * 1.03
+		local start_x = o:x()
+		local start_y = o:y()
+		local wanted_x = math.random(corner_left, corner_right)
+		local wanted_y = math.random(corner_top, corner_bottom)
+		local move_on_x_axis = wanted_x < wanted_y
+		local diff = move_on_x_axis and wanted_x - start_x or wanted_y - start_y
+		local dir = diff == 0 and 0 or diff / math.abs(diff)
+		local overshoot = move_on_x_axis and math.rand(parent_panel:w() * 0.02) or math.rand(parent_panel:h() * 0.02) * dir
+		local dir_moved = 0
+		local function move_one_axis(p)
+			if move_on_x_axis then
+				o:set_x(math.lerp(start_x, wanted_x, p))
+			else
+				o:set_y(math.lerp(start_y, wanted_y, p))
+			end
+		end
+		local function overshoot_one_axis(p)
+			if move_on_x_axis then
+				o:set_x(math.lerp(wanted_x, wanted_x + overshoot, p))
+			else
+				o:set_y(math.lerp(wanted_y, wanted_y + overshoot, p))
+			end
+		end
+		local function bringback_one_axis(p)
+			if move_on_x_axis then
+				o:set_x(math.lerp(wanted_x + overshoot, wanted_x, p))
+			else
+				o:set_y(math.lerp(wanted_y + overshoot, wanted_y, p))
+			end
+		end
+		while true do
+			wait(math.rand(0.1))
+			over(math.abs(diff / 20), move_one_axis)
+			over(math.abs(overshoot / 20), overshoot_one_axis)
+			wait(math.rand(0.1))
+			over(math.abs(overshoot / 200), bringback_one_axis)
+			dir_moved = dir_moved + 1
+			if dir_moved == 2 then
+				start_x = wanted_x
+				start_y = wanted_y
+				wanted_x = math.random(corner_left, corner_right)
+				wanted_y = math.random(corner_top, corner_bottom)
+				dir_moved = 0
+			end
+			move_on_x_axis = not move_on_x_axis
+			diff = move_on_x_axis and wanted_x - start_x or wanted_y - start_y
+			dir = diff == 0 and 0 or diff / math.abs(diff)
+			overshoot = move_on_x_axis and math.random(parent_panel:w() * 0.008) or math.random(parent_panel:h() * 0.008) * dir
+		end
+	end
+	local function select_anim(o, box, instant)
+		if box.image_objects then
+			do
+				local bg = box.bg_object
+				local box_image = box.image_objects[1]
+				local corners = box.image_objects[2]
+				local innerglow = box.image_objects[3]
+				local shadow = box.image_objects[4]
+				local vignette = box.image_objects[5]
+				local corners_off = box.image_objects[6]
+				local select_alpha_blend = box.image_objects[7]
+				local video = box.video
+				if not box.params.select_shape then
+					local select_shape = {
+						0.5,
+						0.5,
+						1,
+						1
+					}
+				end
+				local current_width = box_image.gui:w()
+				local current_height = box_image.gui:h()
+				local end_width = box_image.shape[3] * select_shape[3]
+				local end_height = box_image.shape[4] * select_shape[4]
+				if not alive(video) then
+					box.video = bg.gui:parent():video({
+						video = "movies/mm_glitch",
+						width = bg.gui:w(),
+						height = bg.gui:h(),
+						blend_mode = "add",
+						loop = true,
+						layer = bg.gui:layer() + 2
+					})
+					video = box.video
+					managers.menu_component:set_main_menu_video(video)
+				end
+				corners.gui:show()
+				corners_off.gui:hide()
+				shadow.gui:show()
+				innerglow.gui:show()
+				vignette.gui:hide()
+				local sx = box_image.gui:center_x()
+				local sy = box_image.gui:center_y()
+				local cx = box_image.gui:parent():w() * select_shape[1]
+				local cy = box_image.gui:parent():h() * select_shape[2]
+				box_image.gui:set_alpha(1)
+				select_alpha_blend.gui:set_alpha(1)
+				over(0.1, function(p)
+					box_image.gui:set_size(math.lerp(current_width, end_width, p), math.lerp(current_height, end_height, p))
+					box_image.gui:set_center(math.lerp(sx, cx, p), math.lerp(sy, cy, p))
+					select_alpha_blend.gui:set_alpha(math.lerp(1, 0, p))
+				end)
+				mechanic_animation(box_image.gui)
+			end
+		end
+	end
+	local unselect_anim = function(o, box, instant)
+		if box.image_objects then
+			local box_image = box.image_objects[1]
+			local corners = box.image_objects[2]
+			local innerglow = box.image_objects[3]
+			local shadow = box.image_objects[4]
+			local vignette = box.image_objects[5]
+			local corners_off = box.image_objects[6]
+			local select_alpha_blend = box.image_objects[7]
+			local video = box.video
+			if not box.params.unselect_shape then
+				local unselect_shape = {
+					0.5,
+					0.5,
+					1,
+					1
+				}
+			end
+			local current_width = box_image.gui:w()
+			local current_height = box_image.gui:h()
+			local end_width = box_image.shape[3] * unselect_shape[3]
+			local end_height = box_image.shape[4] * unselect_shape[4]
+			local sx, sy = box_image.gui:center()
+			if alive(video) then
+				video:parent():remove(video)
+				managers.menu_component:set_main_menu_video()
+			end
+			corners.gui:hide()
+			corners_off.gui:show()
+			shadow.gui:hide()
+			innerglow.gui:hide()
+			vignette.gui:show()
+			select_alpha_blend.gui:set_alpha(0)
+			local cx = box_image.gui:parent():w() * unselect_shape[1]
+			local cy = box_image.gui:parent():h() * unselect_shape[2]
+			box_image.gui:set_alpha(1)
+			box_image.gui:set_size(end_width, end_height)
+			box_image.gui:set_center(cx, cy)
+		end
+	end
+	local boxes = {}
+	local template_box_text = {
+		x = panel_w + 15,
+		y = -5,
+		w = 0,
+		h = 30,
+		use_background = true,
+		bg_selected_color = tweak_data.screen_colors.button_stage_3:with_alpha(0.2),
+		bg_unselected_color = Color(0, 0, 0, 0),
+		bg_blend_mode = "add",
+		bg_select_area = true,
+		bg_rotation = 360,
+		text_selected_color = tweak_data.screen_colors.text,
+		text_unselected_color = Color("ff406a80"),
+		padding = 5,
+		x_padding = 10,
+		shrink_text = false,
+		adept_width = true,
+		keep_box_ratio = false,
+		halign = "right",
+		clbks = {
+			left = nil,
+			right = nil,
+			up = nil,
+			down = nil
+		},
+		links = {
+			left = nil,
+			right = nil,
+			up = nil,
+			down = "steam"
+		}
+	}
+	local x = 0
+	do
+		local exit_text = deep_clone(template_box_text)
+		exit_text.name = "exit"
+		exit_text.clbks.left = callback(MenuCallbackHandler, MenuCallbackHandler, "quit_game")
+		exit_text.links.left = "credits"
+		exit_text.links.down = "news"
+		exit_text.text = managers.localization:to_upper_text("menu_quit")
+		boxes.exit = exit_text
+	end
+	do
+		local credits_text = deep_clone(template_box_text)
+		credits_text.name = "credits"
+		function credits_text.clbks.left()
+			managers.menu:open_node("credits")
+		end
+		credits_text.links.left = "settings"
+		credits_text.links.right = "exit"
+		credits_text.links.down = "news"
+		credits_text.text = managers.localization:to_upper_text("menu_credits")
+		boxes.credits = credits_text
+	end
+	do
+		local settings_text = deep_clone(template_box_text)
+		settings_text.name = "settings"
+		function settings_text.clbks.left()
+			managers.menu_component:close_main_menu_gui()
+			managers.menu:open_node("options")
+		end
+		settings_text.links.left = "fbi_files"
+		settings_text.links.right = "credits"
+		settings_text.links.down = "news"
+		settings_text.text = managers.localization:to_upper_text("menu_options")
+		boxes.settings = settings_text
+	end
+	do
+		local fbi_files_text = deep_clone(template_box_text)
+		fbi_files_text.name = "fbi_files"
+		fbi_files_text.clbks.left = callback(MenuCallbackHandler, MenuCallbackHandler, "on_visit_fbi_files")
+		fbi_files_text.links.left = "gamehub"
+		fbi_files_text.links.right = "settings"
+		fbi_files_text.text = managers.localization:to_upper_text("menu_visit_fbi_files")
+		boxes.fbi_files = fbi_files_text
+	end
+	do
+		local gamehub_text = deep_clone(template_box_text)
+		gamehub_text.name = "gamehub"
+		gamehub_text.clbks.left = callback(MenuCallbackHandler, MenuCallbackHandler, "on_visit_gamehub")
+		gamehub_text.links.right = "fbi_files"
+		gamehub_text.links.down = "dlc"
+		gamehub_text.text = managers.localization:to_upper_text("menu_visit_gamehub")
+		boxes.gamehub = gamehub_text
+	end
+	if managers.menu:is_pc_controller() then
+		local back_button_play_text = {
+			x = panel_w,
+			y = panel_h,
+			w = panel_w * 0.35,
+			h = tweak_data.menu.pd2_large_font_size,
+			padding = 0,
+			name = "back_button_play",
+			use_background = true,
+			bg_selected_color = tweak_data.screen_colors.button_stage_3:with_alpha(0.2),
+			bg_unselected_color = Color(0, 0, 0, 0),
+			bg_blend_mode = "add",
+			bg_rotation = 360,
+			text = managers.localization:to_upper_text("menu_back"),
+			text_selected_color = tweak_data.screen_colors.button_stage_2,
+			text_unselected_color = tweak_data.screen_colors.button_stage_3,
+			font = tweak_data.menu.pd2_large_font,
+			font_size = tweak_data.menu.pd2_large_font_size,
+			shrink_text = false,
+			adept_width = true,
+			keep_box_ratio = false,
+			halign = "right",
+			valign = "bottom",
+			text_align = "right",
+			text_vertical = "bottom",
+			state = "play",
+			clbks = {
+				left = function()
+					managers.menu_component:set_new_main_menu_state("default", "play")
+				end,
+				right = nil,
+				up = nil,
+				down = nil
+			},
+			links = {
+				left = "play_online",
+				right = nil,
+				up = "play_offline",
+				down = nil
+			},
+			layer = 2
+		}
+		boxes.back_button_play = back_button_play_text
+		local back_button_play_text_bg = deep_clone(back_button_play_text)
+		back_button_play_text_bg.can_select = false
+		back_button_play_text_bg.name = "back_button_play_bg"
+		back_button_play_text_bg.font = tweak_data.menu.pd2_massive_font
+		back_button_play_text_bg.font_size = tweak_data.menu.pd2_massive_font_size
+		back_button_play_text_bg.h = tweak_data.menu.pd2_massive_font_size + 10
+		back_button_play_text_bg.alpha = 0.4
+		back_button_play_text_bg.text_rotation = 360
+		back_button_play_text_bg.text_selected_color = tweak_data.screen_colors.button_stage_3
+		back_button_play_text_bg.layer = 1
+		back_button_play_text_bg.x = back_button_play_text_bg.x + 13
+		back_button_play_text_bg.y = back_button_play_text_bg.y - 7 + tweak_data.menu.pd2_massive_font_size / 4
+		boxes.back_button_play_bg = back_button_play_text_bg
+	else
+	end
+	local padding_x = 10
+	local padding_y = 10
+	local width = 240
+	local height = 160
+	local size = 256
+	local image_x = 8
+	local image_y = 48
+	local image_w = 256
+	local image_h = 256
+	local panel_grow_w = image_x * -2
+	local panel_grow_h = image_y * -2
+	local select_x = image_x
+	local select_y = image_y
+	local select_w = width
+	local select_h = height
+	local box_x = panel_w - width * 3 - padding_x * 2 - (size - width)
+	local box_y = panel_h - height * 3 - padding_y * 2 - (size - height) - 40
+	local template_box_default = {
+		w = size,
+		h = size,
+		use_background = true,
+		bg_selected_color = Color(51, 0, 0, 51) / 255,
+		bg_unselected_color = Color(64, 0, 0, 0) / 255,
+		bg_selected_blend_mode = "normal",
+		bg_unselected_blend_mode = "add",
+		bg_select_area = true,
+		text_x = padding_x,
+		text_y = select_y,
+		text_vertical = "top",
+		text_align = "left",
+		text_selected_color = tweak_data.screen_colors.text,
+		text_unselected_color = tweak_data.screen_colors.text,
+		select_anim = select_anim,
+		unselect_anim = unselect_anim,
+		images = {
+			{
+				texture = nil,
+				image_width = size,
+				image_height = size,
+				layer = 0,
+				panel_grow_w = panel_grow_w,
+				panel_grow_h = panel_grow_h,
+				blend_mode = "normal",
+				keep_aspect_ratio = false
+			},
+			{
+				texture = "guis/dlcs/flashy/textures/pd2/menu_img_corners",
+				layer = 2,
+				blend_mode = "normal"
+			},
+			{
+				texture = "guis/dlcs/flashy/textures/pd2/menu_img_innerglow",
+				layer = 1,
+				blend_mode = "add"
+			},
+			{
+				texture = "guis/dlcs/flashy/textures/pd2/menu_img_shadow",
+				layer = 1,
+				blend_mode = "normal"
+			},
+			{
+				texture = "guis/dlcs/flashy/textures/pd2/menu_img_vignette",
+				layer = 2,
+				blend_mode = "normal"
+			},
+			{
+				texture = "guis/dlcs/flashy/textures/pd2/menu_img_corners_off",
+				layer = 3,
+				blend_mode = "normal"
+			},
+			{
+				texture = "guis/textures/test_blur_df",
+				layer = 3,
+				panel_grow_w = panel_grow_w,
+				panel_grow_h = panel_grow_h,
+				blend_mode = "add",
+				keep_aspect_ratio = false
+			}
+		},
+		select_area = {
+			x = select_x,
+			y = select_y,
+			w = select_w,
+			h = select_h
+		},
+		clbks = {
+			left = nil,
+			right = nil,
+			up = nil,
+			down = nil
+		},
+		links = {
+			left = nil,
+			right = nil,
+			up = nil,
+			down = nil
+		},
+		select_shape = {
+			0.5,
+			0.5,
+			1,
+			1
+		},
+		unselect_shape = {
+			0.5,
+			0.5,
+			1,
+			1
+		}
+	}
+	do
+		local dlc_box = deep_clone(template_box_default)
+		dlc_box.name = "dlc"
+		function dlc_box.clbks.left()
+			managers.menu:open_node("content_updates_pc")
+		end
+		dlc_box.links.right = "steam"
+		dlc_box.links.down = "play"
+		dlc_box.links.up = "gamehub"
+		dlc_box.text = managers.localization:to_upper_text("menu_content_updates_new")
+		dlc_box.select_shape = {
+			0.5,
+			0.5,
+			0.76,
+			0.76
+		}
+		dlc_box.unselect_shape = {
+			0.5,
+			0.5,
+			0.66,
+			0.66
+		}
+		dlc_box.images[1].image_width = dlc_box.images[1].image_width * 2
+		dlc_box.images[1].texture = tweak_data.gui.content_updates.item_list[#tweak_data.gui.content_updates.item_list].image
+		dlc_box.images[1].selected_color = Color(1, 1, 1, 1)
+		dlc_box.images[1].unselected_color = Color(0.75, 1, 1, 1)
+		local fade_out_time = 0.2
+		local fade_in_time = 0.3
+		local image_swap_time = 2
+		local num_dlc_to_show = 5
+		local unselected_image_speed_mul = 0.2
+		local image_t, fade_out_t, fade_in_t
+		local current_dlc = 0
+		function dlc_box:update_func(box, t, dt)
+			if alive(box.panel) and box.panel:tree_visible() then
+				local data = box.image_objects[1]
+				local ticker = box.image_objects[8]
+				if fade_out_t then
+					fade_out_t = fade_out_t - dt
+					data.gui:set_alpha(math.max(fade_out_t / fade_out_time, 0))
+					if fade_out_t <= 0 then
+						fade_out_t = nil
+						fade_in_t = 0
+						managers.menu_component:unretrieve_texture(box.image_objects.requested_textures[1], box.image_objects.requested_indices[1])
+						data.gui:clear()
+						current_dlc = (current_dlc + 1) % num_dlc_to_show
+						local params = data.params
+						local image = tweak_data.gui.content_updates.item_list[#tweak_data.gui.content_updates.item_list - current_dlc].image
+						local texture_loaded_clbk = callback(self, self, "texture_loaded_clbk", params)
+						box.image_objects.requested_textures[1] = image
+						box.image_objects.requested_indices[1] = managers.menu_component:request_texture(image, texture_loaded_clbk)
+						box.params.images[1].texture = image
+					end
+				elseif fade_in_t then
+					fade_in_t = math.step(fade_in_t, fade_in_time, dt)
+					data.gui:set_alpha(math.min(fade_in_t / fade_in_time, 1))
+					if fade_in_t >= fade_in_time then
+						data.gui:set_alpha(1)
+						fade_in_t = nil
+						image_t = image_swap_time
+					end
+				else
+					image_t = image_t or image_swap_time
+					image_t = image_t - dt * (not box.selected and unselected_image_speed_mul or 1)
+					if image_t <= 0 then
+						fade_out_t = fade_out_time
+						image_t = nil
+					end
+				end
+			end
+		end
+		local function ticker_update_anim(o)
+			while true do
+				local dt = coroutine.yield()
+				local w = current_dlc * 12 + 3 + (1 - (fade_out_t and 0 or image_t or image_swap_time) / image_swap_time) * 9
+				o:set_texture_rect(0, 0, w, 16)
+				o:set_w(w)
+			end
+		end
+		table.insert(dlc_box.images, {
+			texture = "guis/dlcs/flashy/textures/pd2/img_ticker",
+			layer = 4,
+			blend_mode = "normal",
+			panel_move_x = 0,
+			panel_move_y = size / 2 - 8 + panel_grow_h / 2,
+			panel_grow_w = 64 - size,
+			panel_grow_h = 16 - size,
+			color = Color(1, 1, 1, 1),
+			anim_func = ticker_update_anim
+		})
+		table.insert(dlc_box.images, {
+			texture = "guis/dlcs/flashy/textures/pd2/img_ticker_bg",
+			layer = 3,
+			blend_mode = "normal",
+			panel_move_x = 0,
+			panel_move_y = size / 2 - 8 + panel_grow_h / 2,
+			panel_grow_w = 64 - size,
+			panel_grow_h = 16 - size
+		})
+		boxes.dlc = dlc_box
+	end
+	do
+		local steam_box = deep_clone(template_box_default)
+		steam_box.name = "steam"
+		steam_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_steaminventory"
+		function steam_box.clbks.left()
+			managers.menu:open_node("steam_inventory")
+		end
+		steam_box.links.left = "dlc"
+		steam_box.links.right = "news"
+		steam_box.links.down = "profile"
+		steam_box.links.up = "fbi_files"
+		steam_box.text = managers.localization:to_upper_text("menu_steam_inventory_new")
+		steam_box.unselect_shape = {
+			0.5,
+			0.75,
+			0.475,
+			0.475
+		}
+		steam_box.select_shape = {
+			0.5,
+			0.75,
+			0.75,
+			0.75
+		}
+		steam_box.images[1].image_height = 512
+		steam_box.images[1].image_width = 512
+		boxes.steam = steam_box
+	end
+	do
+		local news_box = deep_clone(template_box_default)
+		news_box.name = "news"
+		news_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_news"
+		news_box.links.left = "steam"
+		news_box.links.down = "challenge"
+		news_box.links.up = "settings"
+		news_box.text = managers.localization:to_upper_text("menu_news_new")
+		news_box.info_text = ""
+		news_box.info_text_wrap = true
+		news_box.info_text_word_wrap = true
+		news_box.info_text_align = "center"
+		news_box.info_text_vertical = "center"
+		news_box.images[1].image_width = news_box.images[1].image_width * 2
+		news_box.images[2].rotation = 360
+		news_box.images[3].rotation = 360
+		news_box.images[4].rotation = 360
+		news_box.images[5].rotation = 360
+		news_box.images[6].rotation = 360
+		local fade_out_time = 0.2
+		local fade_in_time = 0.5
+		local news_swap_time = 3
+		local max_news = 5
+		local unselected_news_speed_mul = 0.8
+		local expire_t, fade_out_t, fade_in_t
+		local current_news = -1
+		local news_updated = false
+		local titles, links
+		function news_box.clbks.left()
+			if not links then
+				return
+			end
+			if MenuCallbackHandler:is_overlay_enabled() then
+				Steam:overlay_activate("url", links[current_news + 1])
+			else
+				managers.menu:show_enable_steam_overlay()
+			end
+		end
+		local function news_result(success, body)
+			local _get_text_block = function(s, sp, ep, max_results)
+				local result = {}
+				local len = string.len(s)
+				local i = 1
+				local function f(s, sp, ep, max_results)
+					local s1, e1 = string.find(s, sp, 1, true)
+					if not e1 then
+						return
+					end
+					local s2, e2 = string.find(s, ep, e1, true)
+					table.insert(result, string.sub(s, e1 + 1, s2 - 1))
+				end
+				while len > i and max_results > #result do
+					local s1, e1 = string.find(s, "<item>", i, true)
+					if not e1 then
+						break
+					end
+					local s2, e2 = string.find(s, "</item>", e1, true)
+					local item_s = string.sub(s, e1 + 1, s2 - 1)
+					f(item_s, sp, ep, max_results)
+					i = e1
+				end
+				return result
+			end
+			if success then
+				titles = _get_text_block(body, "<title>", "</title>", max_news)
+				links = _get_text_block(body, "<link><![CDATA[", "]]></link>", max_news)
+				for _, text in ipairs(titles) do
+					if utf8.to_lower(utf8.sub(text, 1, 10)) == "payday 2: " then
+						titles[_] = utf8.sub(text, 11)
+					end
+				end
+			end
+		end
+		function news_box:update_func(box, t, dt)
+			if not news_updated then
+				news_updated = true
+				Steam:http_request("http://steamcommunity.com/games/218620/rss", news_result)
+			end
+			if titles and links and alive(box.panel) and box.panel:tree_visible() then
+				local data = box.info_text_object
+				local image = box.image_objects[1]
+				if fade_out_t then
+					fade_out_t = fade_out_t - dt
+					data.gui:set_alpha(math.max(fade_out_t / fade_out_time, 0))
+					image.gui:set_alpha(math.max(fade_out_t / fade_out_time, 0))
+					if fade_out_t <= 0 then
+						fade_out_t = nil
+						fade_in_t = 0
+						current_news = (current_news + 1) % max_news
+						local text = utf8.to_upper(titles[current_news + 1])
+						data.selected_text = text
+						data.unselected_text = text
+						data.gui:set_text(text)
+						box.params.info_text = text
+					end
+				elseif fade_in_t then
+					fade_in_t = math.step(fade_in_t, fade_in_time, dt)
+					data.gui:set_alpha(math.min(fade_in_t / fade_in_time, 1))
+					image.gui:set_alpha(math.min(fade_in_t / fade_in_time, 1))
+					if fade_in_t >= fade_in_time then
+						data.gui:set_alpha(1)
+						image.gui:set_alpha(1)
+						fade_in_t = nil
+						expire_t = news_swap_time
+					end
+				else
+					expire_t = expire_t or 0
+					expire_t = expire_t - dt * (not box.selected and unselected_news_speed_mul or 1)
+					if expire_t <= 0 then
+						fade_out_t = fade_out_time
+						expire_t = nil
+					end
+				end
+			end
+		end
+		local function ticker_update_anim(o)
+			while true do
+				local dt = coroutine.yield()
+				local w = current_news * 12 + 3 + (1 - (fade_out_t and 0 or expire_t or news_swap_time) / news_swap_time) * 9
+				o:set_texture_rect(0, 0, w, 16)
+				o:set_w(w)
+			end
+		end
+		table.insert(news_box.images, {
+			texture = "guis/dlcs/flashy/textures/pd2/img_ticker",
+			layer = 4,
+			blend_mode = "normal",
+			panel_move_x = 0,
+			panel_move_y = size / 2 - 8 + panel_grow_h / 2,
+			panel_grow_w = 64 - size,
+			panel_grow_h = 16 - size,
+			color = Color(1, 1, 1, 1),
+			anim_func = ticker_update_anim
+		})
+		table.insert(news_box.images, {
+			texture = "guis/dlcs/flashy/textures/pd2/img_ticker_bg",
+			layer = 3,
+			blend_mode = "normal",
+			panel_move_x = 0,
+			panel_move_y = size / 2 - 8 + panel_grow_h / 2,
+			panel_grow_w = 64 - size,
+			panel_grow_h = 16 - size
+		})
+		boxes.news = news_box
+	end
+	do
+		local play_box = deep_clone(template_box_default)
+		play_box.name = "play"
+		play_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_play"
+		function play_box.clbks.left()
+			managers.menu_component:set_new_main_menu_state("play", "play_online")
+		end
+		play_box.links.right = "profile"
+		play_box.links.up = "dlc"
+		play_box.text = managers.localization:to_upper_text("menu_play_new")
+		play_box.select_shape = {
+			0.5,
+			0.25,
+			0.75,
+			0.75
+		}
+		play_box.unselect_shape = {
+			0.5,
+			0.25,
+			0.5,
+			0.5
+		}
+		play_box.images[1].image_height = 512
+		play_box.images[1].image_width = 512
+		boxes.play = play_box
+	end
+	do
+		local profile_box = deep_clone(template_box_default)
+		profile_box.name = "profile"
+		profile_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_character"
+		function profile_box.clbks.left()
+			managers.menu:open_node("inventory")
+		end
+		profile_box.links.left = "play"
+		profile_box.links.right = "challenge"
+		profile_box.links.up = "steam"
+		profile_box.text = managers.localization:to_upper_text("menu_player_inventory_new")
+		profile_box.select_shape = {
+			1,
+			1,
+			0.75,
+			0.75
+		}
+		profile_box.unselect_shape = {
+			1.05,
+			0.75,
+			0.49,
+			0.49
+		}
+		profile_box.images[1].image_height = 512
+		profile_box.images[1].image_width = 1024
+		boxes.profile = profile_box
+	end
+	do
+		local challenge_box = deep_clone(template_box_default)
+		challenge_box.name = "challenge"
+		challenge_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_sidejobs"
+		function challenge_box.clbks.left()
+			managers.menu:open_node("crimenet_contract_challenge")
+		end
+		challenge_box.links.left = "profile"
+		challenge_box.links.up = "news"
+		challenge_box.text = managers.localization:to_upper_text("menu_challenge_new")
+		challenge_box.unselect_shape = {
+			0.5,
+			0.2,
+			0.5,
+			0.5
+		}
+		challenge_box.select_shape = {
+			0.75,
+			-0.15,
+			0.75,
+			0.75
+		}
+		challenge_box.images[1].image_height = 512
+		challenge_box.images[1].image_width = 512
+		boxes.challenge = challenge_box
+	end
+	local template_box_play = deep_clone(template_box_default)
+	template_box_play.h = template_box_play.h * 2
+	template_box_play.text_y = template_box_play.text_y * 2
+	template_box_play.select_area.y = template_box_play.select_area.y * 2 - padding_y / 2
+	template_box_play.select_area.h = template_box_play.select_area.h * 2 + padding_y
+	template_box_play.state = "play"
+	template_box_play.images[1].panel_grow_h = template_box_play.images[1].panel_grow_h * 2 + padding_y
+	template_box_play.images[7].panel_grow_h = template_box_play.images[7].panel_grow_h * 2 + padding_y
+	template_box_play.images[1].image_width = template_box_play.images[1].image_width * 2
+	template_box_play.images[1].image_height = template_box_play.images[1].image_height * 2
+	template_box_play.images[2].texture = "guis/dlcs/flashy/textures/pd2/menu_img_corners_high"
+	template_box_play.images[3].texture = "guis/dlcs/flashy/textures/pd2/menu_img_innerglow_high"
+	template_box_play.images[4].texture = "guis/dlcs/flashy/textures/pd2/menu_img_shadow_high"
+	template_box_play.images[5].texture = "guis/dlcs/flashy/textures/pd2/menu_img_vignette_high"
+	template_box_play.images[6].texture = "guis/dlcs/flashy/textures/pd2/menu_img_corners_off_high"
+	do
+		local play_online_box = deep_clone(template_box_play)
+		play_online_box.name = "play_online"
+		play_online_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_play_online"
+		function play_online_box.clbks.left()
+			local f = function(success)
+				if success then
+					MenuCallbackHandler:play_online_game()
+					MenuCallbackHandler:chk_dlc_content_updated()
+					managers.menu:open_node("crimenet")
+				end
+			end
+			managers.menu:open_sign_in_menu(f)
+		end
+		play_online_box.links.right = "play_offline"
+		play_online_box.links.down = "back_button_play"
+		play_online_box.text = managers.localization:to_upper_text("menu_crimenet_new")
+		play_online_box.unselect_shape = {
+			0.5,
+			0.5,
+			0.66,
+			0.66
+		}
+		play_online_box.select_shape = {
+			0.5,
+			0.5,
+			1,
+			1
+		}
+		play_online_box.images[1].image_width = 512
+		play_online_box.images[1].image_height = 512
+		boxes.play_online = play_online_box
+	end
+	do
+		local play_offline_box = deep_clone(template_box_play)
+		play_offline_box.name = "play_offline"
+		play_offline_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_play_offline"
+		function play_offline_box.clbks.left()
+			MenuCallbackHandler:play_single_player()
+			MenuCallbackHandler:chk_dlc_content_updated()
+			managers.menu:open_node("crimenet_single_player")
+		end
+		play_offline_box.links.left = "play_online"
+		play_offline_box.links.right = "play_safehouse"
+		play_offline_box.links.down = "back_button_play"
+		play_offline_box.text = managers.localization:to_upper_text("menu_crimenet_offline_new")
+		play_offline_box.unselect_shape = {
+			0.5,
+			0.5,
+			0.66,
+			0.66
+		}
+		play_offline_box.select_shape = {
+			0.5,
+			0.5,
+			1,
+			1
+		}
+		play_offline_box.images[1].image_width = 512
+		play_offline_box.images[1].image_height = 512
+		boxes.play_offline = play_offline_box
+	end
+	do
+		local play_safehouse_box = deep_clone(template_box_play)
+		play_safehouse_box.name = "play_safehouse"
+		play_safehouse_box.images[1].texture = "guis/dlcs/flashy/textures/pd2/menu_img_play_safehouse"
+		play_safehouse_box.clbks.left = callback(MenuCallbackHandler, MenuCallbackHandler, "play_safehouse")
+		play_safehouse_box.links.left = "play_offline"
+		play_safehouse_box.links.down = "back_button_play"
+		play_safehouse_box.text = managers.localization:to_upper_text("menu_safehouse_new")
+		play_safehouse_box.unselect_shape = {
+			0.5,
+			0.4,
+			0.8,
+			0.8
+		}
+		play_safehouse_box.select_shape = {
+			0.5,
+			0.5,
+			1,
+			1
+		}
+		play_safehouse_box.images[1].image_width = 512
+		play_safehouse_box.images[1].image_height = 512
+		boxes.play_safehouse = play_safehouse_box
+	end
+	do
+		local default_title = {
+			name = "default_title",
+			text = managers.localization:to_upper_text("menu_mm_default_title"),
+			font = tweak_data.menu.pd2_large_font,
+			font_size = tweak_data.menu.pd2_large_font_size,
+			height = tweak_data.menu.pd2_large_font_size + padding_y,
+			text_vertical = "top",
+			text_align = "left",
+			can_select = false,
+			shrink_text = false,
+			adept_width = true,
+			keep_box_ratio = false,
+			text_color = tweak_data.screen_colors.text:with_alpha(0.8),
+			state = "default"
+		}
+		boxes.default_title = default_title
+	end
+	do
+		local play_title = {
+			name = "play_title",
+			text = managers.localization:to_upper_text("menu_mm_play_title"),
+			font = tweak_data.menu.pd2_large_font,
+			font_size = tweak_data.menu.pd2_large_font_size,
+			height = tweak_data.menu.pd2_large_font_size + padding_y,
+			text_vertical = "top",
+			text_align = "left",
+			can_select = false,
+			shrink_text = false,
+			adept_width = true,
+			keep_box_ratio = false,
+			text_color = tweak_data.screen_colors.text:with_alpha(0.8),
+			state = "play"
+		}
+		boxes.play_title = play_title
+	end
+	local layout = {
+		{
+			box = "credits",
+			align_box = "exit",
+			right_align = "left",
+			top_align = "top",
+			x_offset = -padding_x
+		},
+		{
+			box = "settings",
+			align_box = "credits",
+			right_align = "left",
+			top_align = "top",
+			x_offset = -padding_x
+		},
+		{
+			box = "fbi_files",
+			align_box = "settings",
+			right_align = "left",
+			top_align = "top",
+			x_offset = -padding_x
+		},
+		{
+			box = "gamehub",
+			align_box = "fbi_files",
+			right_align = "left",
+			top_align = "top",
+			x_offset = -padding_x
+		},
+		{
+			box = "news",
+			align_box = "exit",
+			right_align = "right",
+			top_align = "top",
+			x_offset = -7,
+			y_offset = 131
+		},
+		{
+			box = "steam",
+			align_box = "news",
+			right_align = "left",
+			top_align = "top",
+			x_offset = 16 - padding_x,
+			y_offset = 0
+		},
+		{
+			box = "dlc",
+			align_box = "steam",
+			right_align = "left",
+			top_align = "top",
+			x_offset = 16 - padding_x,
+			y_offset = 0
+		},
+		{
+			box = "challenge",
+			align_box = "news",
+			right_align = "right",
+			top_align = "bottom",
+			x_offset = 0,
+			y_offset = -96 + padding_y
+		},
+		{
+			box = "profile",
+			align_box = "challenge",
+			right_align = "left",
+			top_align = "top",
+			x_offset = 16 - padding_x,
+			y_offset = 0
+		},
+		{
+			box = "play",
+			align_box = "profile",
+			right_align = "left",
+			top_align = "top",
+			x_offset = 16 - padding_x,
+			y_offset = 0
+		},
+		{
+			box = "play_safehouse",
+			align_box = "news",
+			right_align = "right",
+			top_align = "top",
+			x_offset = 0,
+			y_offset = -43
+		},
+		{
+			box = "play_offline",
+			align_box = "play_safehouse",
+			right_align = "left",
+			top_align = "top",
+			x_offset = 6,
+			y_offset = 0
+		},
+		{
+			box = "play_online",
+			align_box = "play_offline",
+			right_align = "left",
+			top_align = "top",
+			x_offset = 6,
+			y_offset = 0
+		},
+		{
+			box = "default_title",
+			align_box = "dlc",
+			left_align = "left",
+			bottom_align = "top",
+			x_offset = 6,
+			y_offset = 48
+		},
+		{
+			box = "play_title",
+			align_box = "dlc",
+			left_align = "left",
+			bottom_align = "top",
+			x_offset = 6,
+			y_offset = 48
+		}
+	}
+	return boxes, layout
 end

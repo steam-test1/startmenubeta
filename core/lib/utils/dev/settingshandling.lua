@@ -552,7 +552,10 @@ function EWSControlSettingSync:remove_selected_property_from_list(custom_data, e
 	end
 end
 function EWSControlSettingSync:create_about_dialog(about_text)
-	local text = about_text or "This about was created by\nH\229kan\nThe all and mighty."
+	local text = about_text or [[
+This about was created by
+Håkan
+The all and mighty.]]
 	local num_lines = 0
 	local longest_line = 0
 	local at, at_end = 0, 0
@@ -592,7 +595,10 @@ function EWSControlSettingSync:on_about_dialog_button_ok(data, event)
 end
 AboutDialog = AboutDialog or class()
 function AboutDialog:init(parent, text)
-	local text = text or "This about was created by\nH\229kan\nThe all and mighty."
+	local text = text or [[
+This about was created by
+Håkan
+The all and mighty.]]
 	local num_lines = 0
 	local longest_line = 0
 	local at, at_end = 0, 0

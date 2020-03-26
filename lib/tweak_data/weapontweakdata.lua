@@ -6330,12 +6330,12 @@ function WeaponTweakData:_init_new_weapons(autohit_rifle_default, autohit_pistol
 	self.ksg.single = {}
 	self.ksg.single.fire_rate = 0.575
 	self.ksg.spread = {}
-	self.ksg.spread.standing = self.new_m4.spread.standing
-	self.ksg.spread.crouching = self.new_m4.spread.crouching
-	self.ksg.spread.steelsight = self.new_m4.spread.steelsight
-	self.ksg.spread.moving_standing = self.new_m4.spread.moving_standing
-	self.ksg.spread.moving_crouching = self.new_m4.spread.moving_crouching
-	self.ksg.spread.moving_steelsight = self.new_m4.spread.moving_steelsight
+	self.ksg.spread.standing = self.r870.spread.standing
+	self.ksg.spread.crouching = self.r870.spread.crouching
+	self.ksg.spread.steelsight = self.r870.spread.steelsight
+	self.ksg.spread.moving_standing = self.r870.spread.moving_standing
+	self.ksg.spread.moving_crouching = self.r870.spread.moving_crouching
+	self.ksg.spread.moving_steelsight = self.r870.spread.moving_steelsight
 	self.ksg.kick = {}
 	self.ksg.kick.standing = {
 		1.9,
@@ -9001,6 +9001,7 @@ function WeaponTweakData:_init_new_weapons(autohit_rifle_default, autohit_pistol
 		}
 	}
 	self.m32.projectile_type_index = 6
+	self.m32.projectile_type_indices = {launcher_incendiary = 26}
 	self.m32.damage_melee = damage_melee_default
 	self.m32.damage_melee_effect_mul = damage_melee_effect_multiplier_default
 	self.m32.sounds = {}
@@ -10764,7 +10765,8 @@ function WeaponTweakData:_init_new_weapons(autohit_rifle_default, autohit_pistol
 			"clip_ammo_increase"
 		}
 	}
-	self.china.projectile_type_index = 6
+	self.china.projectile_type_index = 27
+	self.china.projectile_type_indices = {launcher_incendiary = 28}
 	self.china.damage_melee = damage_melee_default
 	self.china.damage_melee_effect_mul = damage_melee_effect_multiplier_default
 	self.china.sounds = {}

@@ -538,6 +538,9 @@ function ConnectionNetworkHandler:choose_lootcard(card_id, sender)
 	end
 end
 function ConnectionNetworkHandler:sync_explode_bullet(position, normal, damage, peer_id_or_selection_index, sender)
+-- fail 26
+unluac.decompile.expression.FunctionCall@1221655
+-1
 	local peer = self._verify_sender(sender)
 	if not self._verify_gamestate(self._gamestate_filter.any_ingame) or not peer then
 		return

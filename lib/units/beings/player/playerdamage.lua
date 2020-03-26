@@ -30,6 +30,9 @@ function PlayerDamage:init(unit)
 	self._doh_data = tweak_data.upgrades.damage_to_hot_data or {}
 	self._damage_to_hot_stack = {}
 	self._armor_stored_health = 0
+	self._can_take_dmg_timer = 0
+	self._regen_on_the_side_timer = 0
+	self._regen_on_the_side = false
 end
 function PlayerDamage:post_init()
 	self:send_set_status()
@@ -39,6 +42,9 @@ function PlayerDamage:send_set_status()
 	self:_send_set_health()
 end
 function PlayerDamage:force_into_bleedout()
+	if self:incapacitated() or self:arrested() then
+		return
+	end
 	self:set_health(0)
 	self:_chk_cheat_death()
 	self:_damage_screen()
@@ -52,6 +58,8 @@ function PlayerDamage:force_into_bleedout()
 	self:_set_health_effect()
 end
 function PlayerDamage:update(unit, t, dt)
+	self:_update_can_take_dmg_timer(dt)
+	self:_update_regen_on_the_side(dt)
 	if not self._armor_stored_health_max_set then
 		self._armor_stored_health_max_set = true
 		self:update_armor_stored_health()
@@ -90,6 +98,10 @@ function PlayerDamage:update(unit, t, dt)
 	if self._bleed_out_blocked_by_movement_state and not self._unit:movement():current_state():bleed_out_blocked() then
 		self:force_into_bleedout()
 		self._bleed_out_blocked_by_movement_state = nil
+	end
+	if self._bleed_out_blocked_by_tased and not self._unit:movement():tased() then
+		self:force_into_bleedout()
+		self._bleed_out_blocked_by_tased = nil
 	end
 	if self._regenerate_timer and not self._dead and not self._bleed_out and not self._check_berserker_done then
 		if not is_berserker_active and not self._bleed_out_blocked_by_zipline then
@@ -415,8 +427,8 @@ function PlayerDamage:damage_tase(attack_data)
 	end
 end
 function PlayerDamage:on_tased(non_lethal)
-	if self:get_real_health() == 0 and self._check_berserker_done then
-		self:change_health(1)
+	if self._check_berserker_done then
+		self._bleed_out_blocked_by_tased = true
 	end
 end
 function PlayerDamage:tase_data()
@@ -427,6 +439,9 @@ function PlayerDamage:erase_tase_data()
 end
 local mvec1 = Vector3()
 function PlayerDamage:damage_melee(attack_data)
+	if not self:_chk_can_take_dmg() then
+		return
+	end
 	local can_counter_strike = managers.player:has_category_upgrade("player", "counter_strike_melee")
 	if can_counter_strike and self._unit:movement():current_state().in_melee and self._unit:movement():current_state():in_melee() then
 		self._unit:movement():current_state():discharge_melee()
@@ -483,6 +498,9 @@ function PlayerDamage:clbk_kill_taunt(attack_data)
 	end
 end
 function PlayerDamage:damage_bullet(attack_data)
+	if not self:_chk_can_take_dmg() then
+		return
+	end
 	local damage_info = {
 		result = {type = "hurt", variant = "bullet"},
 		attacker_unit = attack_data.attacker_unit
@@ -588,6 +606,11 @@ function PlayerDamage:_calc_armor_damage(attack_data)
 			self._unit:sound():play("player_armor_gone_stinger")
 			if attack_data.armor_piercing then
 				self._unit:sound():play("player_sniper_hit_armor_gone")
+			end
+			self:_start_regen_on_the_side(managers.player:upgrade_value("player", "passive_always_regen_armor", 0))
+			if managers.player:has_inactivate_temporary_upgrade("temporary", "armor_break_invulnerable") then
+				managers.player:activate_temporary_upgrade("temporary", "armor_break_invulnerable")
+				self._can_take_dmg_timer = managers.player:temporary_upgrade_value("temporary", "armor_break_invulnerable", 0)
 			end
 		end
 	end
@@ -738,6 +761,9 @@ function PlayerDamage:damage_fall(data)
 	return true
 end
 function PlayerDamage:damage_explosion(attack_data)
+	if not self:_chk_can_take_dmg() then
+		return
+	end
 	local damage_info = {
 		result = {type = "hurt", variant = "explosion"}
 	}
@@ -763,6 +789,9 @@ function PlayerDamage:damage_explosion(attack_data)
 	self:_call_listeners(damage_info)
 end
 function PlayerDamage:damage_fire(attack_data)
+	if not self:_chk_can_take_dmg() then
+		return
+	end
 	local damage_info = {
 		result = {type = "hurt", variant = "fire"}
 	}
@@ -1375,6 +1404,27 @@ function PlayerDamage:_stop_tinnitus()
 	end
 	self._unit:sound():play("tinnitus_beep_stop")
 	self._tinnitus_data = nil
+end
+function PlayerDamage:_chk_can_take_dmg()
+	return self._can_take_dmg_timer <= 0
+end
+function PlayerDamage:_update_can_take_dmg_timer(dt)
+	self._can_take_dmg_timer = math.max(self._can_take_dmg_timer - dt, 0)
+end
+function PlayerDamage:_start_regen_on_the_side(time)
+	if self._regen_on_the_side_timer <= 0 and time > 0 then
+		self._regen_on_the_side_timer = time
+		self._regen_on_the_side = true
+	end
+end
+function PlayerDamage:_update_regen_on_the_side(dt)
+	if self._regen_on_the_side then
+		self._regen_on_the_side_timer = math.max(self._regen_on_the_side_timer - dt, 0)
+		if self._regen_on_the_side_timer <= 0 then
+			self._regen_on_the_side = false
+			self:_regenerate_armor()
+		end
+	end
 end
 PlayerBodyDamage = PlayerBodyDamage or class()
 function PlayerBodyDamage:init(unit, unit_extension, body)

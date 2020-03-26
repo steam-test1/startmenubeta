@@ -415,6 +415,12 @@ function StatsTabItem.animate_deselect(o)
 end
 StageEndScreenGui = StageEndScreenGui or class()
 function StageEndScreenGui:init(saferect_ws, fullrect_ws, statistics_data)
+-- fail 206
+unluac.decompile.expression.FunctionCall@20c684
+-1
+-- fail 401
+unluac.decompile.expression.FunctionCall@1b3ebeb
+-1
 	self._safe_workspace = saferect_ws
 	self._full_workspace = fullrect_ws
 	self._fullscreen_panel = self._full_workspace:panel():panel({layer = 1})

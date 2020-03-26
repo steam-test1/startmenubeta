@@ -157,6 +157,9 @@ function SoundLayer:update(t, dt)
 	end
 end
 function SoundLayer:build_panel(notebook)
+-- fail 137
+null
+11
 	SoundLayer.super.build_panel(self, notebook)
 	self._sound_panel = EWS:Panel(self._ews_panel, "", "TAB_TRAVERSAL")
 	self._sound_sizer = EWS:BoxSizer("VERTICAL")

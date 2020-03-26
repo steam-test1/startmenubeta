@@ -1146,7 +1146,16 @@ function StatisticsManager:killed(data)
 			"benelli",
 			"judge",
 			"rpg7",
-			"m32"
+			"m32",
+			"china",
+			"b682",
+			"m37",
+			"spas12",
+			"frankish",
+			"arblast",
+			"hunter",
+			"plainsrider",
+			"long"
 		}
 		if name_id and table.contains(boom_guns, name_id) then
 			self:_add_to_killed_by_weapon(name_id, data)
@@ -1589,6 +1598,9 @@ function StatisticsManager:session_hit_accuracy()
 		return 0
 	end
 	return math.floor(self._global.session.shots_fired.hits / self._global.session.shots_fired.total * 100)
+end
+function StatisticsManager:sessions_jobs()
+	return self._global.sessions.jobs
 end
 function StatisticsManager:session_total_civilian_kills()
 	return self._global.session.killed.civilian.count + self._global.session.killed.civilian_female.count

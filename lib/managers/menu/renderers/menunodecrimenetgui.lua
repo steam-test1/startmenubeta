@@ -593,7 +593,7 @@ function MenuNodeCrimenetCasinoGui:_setup_layout()
 			end
 		end
 	end
-	local _, infamous_base_chance, infamous_mod = managers.lootdrop:infamous_chance()
+	local _, infamous_base_chance, infamous_mod = managers.lootdrop:infamous_chance({disable_difficulty = true})
 	local infamous_chance = items_total > 0 and infamous_base_chance * (items_infamous / items_total) or 0
 	self._infamous_chance = {}
 	self._infamous_chance.base = infamous_chance
@@ -1700,19 +1700,6 @@ function MenuNodeCrimenetGageAssignmentGui:_setup_layout()
 	end
 	local panel = ws:panel():panel({name = "main_panel"})
 	self._fullscreen_panel = mc_full_ws:panel():panel({layer = 50})
-	local blur = self._fullscreen_panel:bitmap({
-		texture = "guis/textures/test_blur_df",
-		w = self._fullscreen_panel:w(),
-		h = self._fullscreen_panel:h(),
-		render_template = "VertexColorTexturedBlur3D"
-	})
-	local func = function(o)
-		local start_blur = 0
-		over(0.6, function(p)
-			o:set_alpha(math.lerp(start_blur, 1, p))
-		end)
-	end
-	blur:animate(func)
 	local width = self.WIDTH
 	local height = self.HEIGHT
 	self._panel = panel:panel({
@@ -1720,7 +1707,7 @@ function MenuNodeCrimenetGageAssignmentGui:_setup_layout()
 		w = width,
 		layer = 51
 	})
-	self._panel:set_center(panel:w() / 2, panel:h() / 2)
+	self:_set_panel_position(panel)
 	self._panel:rect({
 		color = Color.black,
 		alpha = 0.6,
@@ -1763,8 +1750,27 @@ function MenuNodeCrimenetGageAssignmentGui:_setup_layout()
 	})
 	self._info_panel:set_w(self._panel:w() - self._info_panel:x() - self.PADDING)
 	self._info_panel:set_h(self._panel:h() - self._info_panel:y() - self.PADDING)
+	self:_setup_blur()
 	self._init_finish = true
 	self:_setup_menu()
+end
+function MenuNodeCrimenetGageAssignmentGui:_setup_blur()
+	local blur = self._fullscreen_panel:bitmap({
+		texture = "guis/textures/test_blur_df",
+		w = self._fullscreen_panel:w(),
+		h = self._fullscreen_panel:h(),
+		render_template = "VertexColorTexturedBlur3D"
+	})
+	local func = function(o)
+		local start_blur = 0
+		over(0.6, function(p)
+			o:set_alpha(math.lerp(start_blur, 1, p))
+		end)
+	end
+	blur:animate(func)
+end
+function MenuNodeCrimenetGageAssignmentGui:_set_panel_position(panel)
+	self._panel:set_center(panel:w() / 2, panel:h() / 2)
 end
 function MenuNodeCrimenetGageAssignmentGui:set_file(index)
 end
@@ -1797,6 +1803,28 @@ function MenuNodeCrimenetChallengeGui:init(node, layer, parameters)
 		mouse_over = 1
 	}
 	self._file_alphas = self._file_alphas_all
+end
+function MenuNodeCrimenetChallengeGui:_create_timestamp_string_extended(timestamp)
+	local minutes = 59 - tonumber(Application:date("%M"))
+	local seconds = 59 - tonumber(Application:date("%S"))
+	local expire_string = ""
+	if timestamp > 24 then
+		expire_string = managers.localization:text("menu_challenge_expire_time_extended_with_days", {
+			days = timestamp % 24,
+			hours = math.floor(timestamp / 24),
+			minutes = minutes,
+			seconds = seconds
+		})
+	elseif timestamp >= 0 then
+		expire_string = managers.localization:text("menu_challenge_expire_time_extended", {
+			hours = timestamp,
+			minutes = minutes,
+			seconds = seconds
+		})
+	else
+		expire_string = managers.localization:text("menu_challenge_about_to_expire_extended")
+	end
+	return expire_string
 end
 function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override_file)
 	self:unretrieve_textures()
@@ -1839,9 +1867,7 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 			text = managers.localization:to_upper_text("menu_challenge_objective_title"),
 			font = tweak_data.menu.pd2_small_font,
 			font_size = tweak_data.menu.pd2_small_font_size,
-			color = tweak_data.screen_colors.text,
-			wrap = true,
-			word_wrap = true,
+			color = tweak_data.screen_colors.challenge_title,
 			blend_mode = "add"
 		})
 		make_fine_text(objective_title_text)
@@ -1858,7 +1884,7 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 				word_wrap = true,
 				blend_mode = "add"
 			})
-			objective_text:set_left(objective_title_text:left() + 15)
+			objective_text:set_left(objective_title_text:left() + 0)
 			objective_text:set_top(y)
 			objective_text:grow(-objective_text:left(), 0)
 			local _, _, _, h = objective_text:text_rect()
@@ -1873,8 +1899,6 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 					font = tweak_data.menu.pd2_small_font,
 					font_size = tweak_data.menu.pd2_small_font_size,
 					color = tweak_data.screen_colors.text,
-					wrap = true,
-					word_wrap = true,
 					blend_mode = "add"
 				})
 				if not objective.desc_s then
@@ -1891,8 +1915,6 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 					font = tweak_data.menu.pd2_small_font,
 					font_size = tweak_data.menu.pd2_small_font_size,
 					color = tweak_data.screen_colors.text,
-					wrap = true,
-					word_wrap = true,
 					blend_mode = "add"
 				})
 				make_fine_text(name_text)
@@ -1904,75 +1926,45 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 				y = math.max(name_text:bottom(), desc_text:bottom())
 			end
 		end
-		if challenge.reward_s or challenge.reward_id then
-			local reward_title_text = self._info_panel:text({
-				name = "reward_title_text",
-				text = managers.localization:to_upper_text("menu_challenge_reward_title"),
-				font = tweak_data.menu.pd2_small_font,
-				font_size = tweak_data.menu.pd2_small_font_size,
-				color = tweak_data.screen_colors.text,
-				wrap = true,
-				word_wrap = true,
-				blend_mode = "add"
-			})
-			make_fine_text(reward_title_text)
-			reward_title_text:set_top(y + tweak_data.menu.pd2_small_font_size)
-			local reward_text = self._info_panel:text({
-				name = "rewards_text",
-				text = challenge.reward_s or managers.localization:text(challenge.reward_id),
-				font = tweak_data.menu.pd2_small_font,
-				font_size = tweak_data.menu.pd2_small_font_size,
-				color = tweak_data.screen_colors.text,
-				wrap = true,
-				word_wrap = true,
-				blend_mode = "add"
-			})
-			reward_text:set_left(reward_title_text:left() + 15)
-			reward_text:set_top(reward_title_text:bottom())
-			reward_text:grow(-reward_text:left(), 0)
-			local _, _, _, h = reward_text:text_rect()
-			reward_text:set_h(h)
-			y = reward_text:bottom()
-		end
 		if not challenge.rewarded then
 			local timestamp = challenge.timestamp
 			local interval = challenge.interval
 			local expire_timestamp = interval + timestamp
 			local current_timestamp = managers.challenge:get_timestamp()
 			local expire_time = expire_timestamp - current_timestamp
+			local expire_string = self:_create_timestamp_string_extended(expire_time)
 			local expire_text = self._info_panel:text({
 				name = "expire_text",
 				text = expire_string,
 				font = tweak_data.menu.pd2_small_font,
 				font_size = tweak_data.menu.pd2_small_font_size,
 				color = expire_time <= 4 and tweak_data.screen_colors.important_1 or tweak_data.screen_colors.important_2,
-				wrap = true,
-				word_wrap = true,
+				alpha = expire_time == 0 and 1 or 0.9,
 				blend_mode = "add"
 			})
 			make_fine_text(expire_text)
-			expire_text:set_top(y + tweak_data.menu.pd2_small_font_size)
-			y = expire_text:bottom()
+			expire_text:set_bottom(self._info_panel:h())
+			self._expire_text = expire_text
 		end
+		local rewards_panel
 		if challenge.rewards and 0 < #challenge.rewards then
 			local x = self.PADDING
 			local min_height = 64
-			local height = math.clamp(self._info_panel:h() - y - self.PADDING * 2 - tweak_data.menu.pd2_small_font_size, min_height, 128)
+			local height = math.clamp(self._info_panel:h() - y - self.PADDING * 2 - tweak_data.menu.pd2_small_font_size - (alive(self._expire_text) and self._expire_text:h() or 0), min_height, 128)
 			local width = math.min((self._info_panel:w() - self.PADDING * (#challenge.rewards - 1)) / #challenge.rewards, height)
-			local rewards_panel = self._info_panel:panel({
+			rewards_panel = self._info_panel:panel({
 				name = "rewards_panel",
 				layer = 10
 			})
+			rewards_panel:set_w((width - 2 * self.PADDING) * #challenge.rewards + self.PADDING * (#challenge.rewards + 1))
 			rewards_panel:set_h(height)
-			rewards_panel:set_bottom(self._info_panel:h())
+			rewards_panel:set_bottom(self._info_panel:h() - (alive(self._expire_text) and self._expire_text:h() or 0))
+			rewards_panel:set_right(self._info_panel:w())
 			local files_menu = rewards_panel:panel({name = "files_menu"})
 			local locked
 			local unavailable = not challenge.completed
 			local next_x
 			if challenge.reward_type == "single" then
-				local num_reward = #challenge.rewards
-				next_x = (files_menu:w() - self.PADDING * 2) / (num_reward + 1)
-				x = next_x - width / 2 + self.PADDING
 			end
 			for i, reward in ipairs(challenge.rewards) do
 				local panel = files_menu:panel({
@@ -1989,34 +1981,6 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 			end
 			self._files_menu = files_menu
 			self:set_file(1)
-			local color = false
-			local rewards_text = self._info_panel:text({
-				name = "rewards_text",
-				layer = 10,
-				text = managers.localization:to_upper_text(challenge.rewarded and "menu_cn_rewarded" or challenge.completed and (challenge.reward_type == "single" and "menu_cn_completed_single_reward" or "menu_cn_completed") or challenge.reward_type == "single" and "menu_cn_not_completed_single_reward" or "menu_cn_not_completed"),
-				font = tweak_data.menu.pd2_small_font,
-				font_size = tweak_data.menu.pd2_small_font_size,
-				color = tweak_data.screen_colors.text,
-				wrap = true,
-				word_wrap = true,
-				blend_mode = "add"
-			})
-			make_fine_text(rewards_text)
-			rewards_text:set_bottom(rewards_panel:top())
-			if color then
-				rewards_text:set_color(color)
-			end
-			if height == min_height then
-				self._info_panel:rect({
-					w = rewards_panel:w(),
-					h = rewards_panel:bottom() - rewards_text:top(),
-					x = rewards_panel:x(),
-					y = rewards_text:top(),
-					color = Color.black,
-					layer = 9,
-					alpha = 0.5
-				})
-			end
 			BoxGuiObject:new(rewards_panel, {
 				sides = {
 					1,
@@ -2025,6 +1989,41 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 					1
 				}
 			})
+		end
+		if challenge.reward_s or challenge.reward_id then
+			local reward_title_text = self._info_panel:text({
+				name = "reward_title_text",
+				text = challenge.rewarded and managers.localization:to_upper_text("menu_cn_rewarded") or managers.localization:to_upper_text("menu_challenge_reward_title"),
+				font = tweak_data.menu.pd2_small_font,
+				font_size = tweak_data.menu.pd2_small_font_size,
+				color = tweak_data.screen_colors.challenge_title,
+				wrap = true,
+				word_wrap = true,
+				blend_mode = "add"
+			})
+			make_fine_text(reward_title_text)
+			local reward_text = self._info_panel:text({
+				name = "rewards_text",
+				text = challenge.reward_s or managers.localization:text(challenge.reward_id),
+				font = tweak_data.menu.pd2_small_font,
+				font_size = tweak_data.menu.pd2_small_font_size,
+				color = tweak_data.screen_colors.text,
+				wrap = true,
+				word_wrap = true,
+				blend_mode = "add"
+			})
+			if alive(rewards_panel) then
+				reward_title_text:set_top(rewards_panel:top())
+				reward_text:set_w(rewards_panel:left() - self.PADDING)
+			else
+				reward_title_text:set_top(y + tweak_data.menu.pd2_small_font_size)
+			end
+			reward_text:set_left(reward_title_text:left() + 0)
+			reward_text:set_top(reward_title_text:bottom())
+			reward_text:grow(-reward_text:left(), 0)
+			local _, _, _, h = reward_text:text_rect()
+			reward_text:set_h(h)
+			y = reward_text:bottom()
 		end
 	elseif ids == Idstring("_introduction") then
 		local introduction_text = self._info_panel:text({
@@ -2055,7 +2054,27 @@ function MenuNodeCrimenetChallengeGui:set_contact_info(id, name, files, override
 	local contact_title_text = self._panel:child("contact_title_text")
 	contact_title_text:set_text(utf8.to_upper(contact_title))
 	make_fine_text(contact_title_text)
+	contact_title_text:set_range_color(0, utf8.len(contact_title_text:text()) - utf8.len(name), tweak_data.screen_colors.challenge_title)
+	contact_title_text:set_blend_mode("add")
 	self._current_contact_info = id
+	self._current_challenge = challenge
+end
+function MenuNodeCrimenetChallengeGui:update(t, dt)
+	MenuNodeCrimenetChallengeGui.super.update(self, t, dt)
+	if alive(self._expire_text) and self._current_challenge then
+		local challenge = self._current_challenge
+		local timestamp = challenge.timestamp
+		local interval = challenge.interval
+		local expire_timestamp = interval + timestamp
+		local current_timestamp = managers.challenge:get_timestamp()
+		local expire_time = expire_timestamp - current_timestamp
+		local expire_string = self:_create_timestamp_string_extended(expire_time)
+		self._expire_text:set_text(expire_string)
+		self._expire_text:set_color(expire_time <= 4 and tweak_data.screen_colors.important_1 or tweak_data.screen_colors.important_2)
+		self._expire_text:set_alpha(expire_time == 0 and 1 or 0.9)
+		make_fine_text(self._expire_text)
+		self._expire_text:set_bottom(self._info_panel:h())
+	end
 end
 function MenuNodeCrimenetChallengeGui:create_reward(panel, reward, challenge)
 	local texture, texture_path, texture_rect
@@ -2089,7 +2108,7 @@ function MenuNodeCrimenetChallengeGui:create_reward(panel, reward, challenge)
 				is_pattern = true
 			elseif category == "cash" then
 				texture_path = "guis/textures/pd2/blackmarket/cash_drop"
-				reward_string = managers.localization:text("menu_challenge_cash_drop")
+				reward_string = managers.experience:cash_string(managers.money:get_loot_drop_cash_value(tweak_data.blackmarket[category][id].value_id))
 			elseif category == "xp" then
 				texture_path = "guis/textures/pd2/blackmarket/xp_drop"
 				reward_string = managers.localization:text("menu_challenge_xp_drop")
@@ -2135,7 +2154,7 @@ function MenuNodeCrimenetChallengeGui:create_reward(panel, reward, challenge)
 		rotation = 360
 	})
 	make_fine_text(reward_text)
-	reward_text:set_top(reward_panel:bottom() + tweak_data.menu.pd2_small_font_size * 0.5)
+	reward_text:set_top(reward_panel:bottom() + tweak_data.menu.pd2_small_font_size * 0.5 - self.PADDING)
 	reward_text:set_center_x(reward_panel:center_x())
 	reward_text:set_visible(true)
 	if color then
@@ -2448,6 +2467,131 @@ function MenuNodeCrimenetChallengeGui:_setup_menu()
 	self._list_arrows.down:set_world_left(self._align_data.panel:world_left())
 	self._list_arrows.down:set_world_bottom(self._align_data.panel:world_bottom())
 	self._list_arrows.down:set_width(self._item_panel_parent:w())
+end
+MenuNodeCrimenetChallengeNewGui = MenuNodeCrimenetChallengeNewGui or class(MenuNodeCrimenetChallengeGui)
+MenuNodeCrimenetChallengeNewGui.WIDTH = 740
+MenuNodeCrimenetChallengeNewGui.HEIGHT = 442
+MenuNodeCrimenetChallengeNewGui.MENU_WIDTH = 240
+MenuNodeCrimenetChallengeNewGui.PADDING = 10
+MenuNodeCrimenetChallengeNewGui.CODEX_TEXT_ID = "menu_cn_challenge_title_new"
+function MenuNodeCrimenetChallengeNewGui:init(...)
+	MenuNodeCrimenetChallengeNewGui.super.init(self, ...)
+	managers.menu_component:disable_main_menu()
+end
+function MenuNodeCrimenetChallengeNewGui:close(...)
+	MenuNodeCrimenetChallengeNewGui.super.close(self, ...)
+	managers.menu_component:enable_main_menu()
+end
+function MenuNodeCrimenetChallengeNewGui:_set_panel_position(panel)
+	self._panel:set_right(panel:w())
+	self._panel:set_top(172)
+end
+function MenuNodeCrimenetChallengeNewGui:_setup_blur()
+	local full_scaled_size = managers.gui_data:full_16_9_size()
+	local blur = self._fullscreen_panel:bitmap({
+		texture = "guis/textures/test_blur_df",
+		render_template = "VertexColorTexturedBlur3D"
+	})
+	blur:set_world_shape(self._panel:world_shape())
+	blur:move(full_scaled_size.convert_x, full_scaled_size.convert_y)
+	local func = function(o)
+		local start_blur = 0
+		over(0.6, function(p)
+			o:set_alpha(math.lerp(start_blur, 1, p))
+		end)
+	end
+	blur:animate(func)
+end
+function MenuNodeCrimenetChallengeNewGui:_setup_item_panel_parent(safe_rect, shape)
+	local x = safe_rect.x + safe_rect.width - self.WIDTH + self.PADDING
+	local y = safe_rect.y + safe_rect.height - self.HEIGHT + self.PADDING - 60
+	shape = shape or {}
+	shape.x = shape.x or x
+	shape.y = shape.y or y
+	shape.w = shape.w or self.MENU_WIDTH
+	shape.h = shape.h or self.HEIGHT - 2 * self.PADDING - tweak_data.menu.pd2_small_font_size
+	MenuNodeCrimenetChallengeNewGui.super.super._setup_item_panel_parent(self, safe_rect, shape)
+end
+function MenuNodeCrimenetChallengeNewGui:_setup_menu()
+	if not self._init_finish then
+		return
+	end
+	MenuNodeCrimenetChallengeNewGui.super._setup_menu(self)
+	if alive(self.ws:panel():child("main_panel"):child("title_text")) then
+		local title_text = self.ws:panel():child("main_panel"):child("title_text")
+		local bottom = title_text:bottom()
+		title_text:set_font(Idstring(tweak_data.menu.pd2_large_font))
+		title_text:set_font_size(tweak_data.menu.pd2_large_font_size)
+		make_fine_text(title_text)
+		title_text:set_bottom(bottom)
+	end
+	if self._back_row_item and alive(self._back_row_item.gui_text) then
+		self._back_row_item.gui_text:set_w(self:_scaled_size().width * 0.35)
+		self._back_row_item.gui_text:set_world_right(math.round(self.ws:panel():w()))
+		self._back_row_item.gui_text:set_world_bottom(math.round(self.ws:panel():h()))
+		if not self._back_item_bg and MenuBackdropGUI and managers.menu:is_pc_controller() then
+			local bg_text = self._back_row_item.gui_pd2_panel:text({
+				text = utf8.to_upper(self._back_row_item.text),
+				h = 90,
+				align = "right",
+				vertical = "bottom",
+				font_size = tweak_data.menu.pd2_massive_font_size,
+				font = tweak_data.menu.pd2_massive_font,
+				color = tweak_data.screen_colors.button_stage_3,
+				alpha = 0.4,
+				layer = -1,
+				rotation = 360
+			})
+			bg_text:set_right(self._back_row_item.gui_text:right())
+			bg_text:set_center_y(self._back_row_item.gui_text:center_y())
+			bg_text:move(13, -9)
+			self._back_item_bg = true
+			MenuBackdropGUI.animate_bg_text(self, bg_text)
+		end
+	end
+end
+function MenuNodeCrimenetChallengeNewGui:gui_node_custom(row_item)
+	row_item.gui_panel = self._item_panel_parent:panel({
+		layer = self.layers.items,
+		w = 3,
+		h = 3
+	})
+	row_item.gui_pd2_panel = self.ws:panel():panel({
+		layer = self.layers.items
+	})
+	local row_item_panel = row_item.gui_pd2_panel
+	row_item.gui_text = row_item_panel:text({
+		font_size = tweak_data.menu.pd2_large_font_size,
+		x = 0,
+		y = 0,
+		align = "right",
+		vertical = "bottom",
+		font = tweak_data.menu.pd2_large_font,
+		color = tweak_data.screen_colors.button_stage_3,
+		layer = 0,
+		text = utf8.to_upper(row_item.text),
+		blend_mode = "add",
+		render_template = Idstring("VertexColorTextured")
+	})
+	local _, _, w, h = row_item.gui_text:text_rect()
+	row_item.gui_text:set_size(math.round(w), math.round(h))
+	self._back_row_item = row_item
+	self._back_item_bg = false
+end
+function MenuNodeCrimenetChallengeNewGui:_align_marker(row_item)
+	MenuNodeCrimenetChallengeGui.super.super._align_marker(self, row_item)
+	if row_item.item:parameters().pd2_corner then
+		self._marker_data.marker:set_visible(true)
+		self._marker_data.gradient:set_visible(true)
+		self._marker_data.gradient:set_rotation(360)
+		self._marker_data.marker:set_height(64 * row_item.gui_text:height() / 32)
+		self._marker_data.gradient:set_height(64 * row_item.gui_text:height() / 32)
+		self._marker_data.marker:set_w(self:_scaled_size().width * 0.35)
+		self._marker_data.gradient:set_w(self._marker_data.marker:w())
+		self._marker_data.marker:set_world_right(row_item.gui_text:world_right())
+		self._marker_data.marker:set_world_center_y(row_item.gui_text:world_center_y() - 2)
+		return
+	end
 end
 MenuNodeChooseWeaponRewardGui = MenuNodeChooseWeaponRewardGui or class(MenuNodeCrimenetFiltersGui)
 function MenuNodeChooseWeaponRewardGui:init(node, layer, parameters)

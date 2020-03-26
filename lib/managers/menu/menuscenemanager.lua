@@ -150,8 +150,8 @@ function MenuSceneManager:_setup_gui()
 		h = self._main_panel:h() - 64
 	})
 	self._character_grab = self._main_panel:panel({
-		w = 550,
-		h = self._main_panel:h() - 64
+		w = 450,
+		h = self._main_panel:h()
 	})
 	self._character_grab2 = self._main_panel:panel({
 		x = self._main_panel:w() * 0.25,
@@ -199,6 +199,7 @@ function MenuSceneManager:_set_up_templates()
 	self._scene_templates.blackmarket.use_item_grab = true
 	self._scene_templates.blackmarket.camera_pos = offset:rotate_with(Rotation(90))
 	self._scene_templates.blackmarket.target_pos = Vector3(-100, -100, 0) + self._camera_start_rot:x() * 100 + self._camera_start_rot:y() * 6 + self._camera_start_rot:z() * 0
+	self._scene_templates.blackmarket.hide_menu_logo = true
 	self._scene_templates.blackmarket.lights = {}
 	self._scene_templates.blackmarket_item = {}
 	self._scene_templates.blackmarket_item.fov = 40
@@ -207,6 +208,7 @@ function MenuSceneManager:_set_up_templates()
 	self._scene_templates.blackmarket_item.camera_pos = offset:rotate_with(Rotation(45)) + Vector3(0, 0, 200)
 	self._scene_templates.blackmarket_item.target_pos = target_pos + Vector3(0, 0, 200)
 	self._scene_templates.blackmarket_item.character_pos = c_ref:position() + Vector3(0, 500, 0)
+	self._scene_templates.blackmarket_item.hide_menu_logo = true
 	local l_pos = self._scene_templates.blackmarket_item.camera_pos
 	local rot = Rotation(self._scene_templates.blackmarket_item.target_pos - l_pos, math.UP)
 	local l1_pos = l_pos + rot:x() * 50 + rot:y() * 50
@@ -250,6 +252,7 @@ function MenuSceneManager:_set_up_templates()
 	self._scene_templates.blackmarket_mask.camera_pos = offset:rotate_with(Rotation(45)) + Vector3(0, 0, 200)
 	self._scene_templates.blackmarket_mask.target_pos = target_pos + Vector3(0, 0, 200)
 	self._scene_templates.blackmarket_mask.character_pos = c_ref:position() + Vector3(0, 500, 0)
+	self._scene_templates.blackmarket_mask.hide_menu_logo = true
 	local l_pos = self._scene_templates.blackmarket_mask.camera_pos
 	local rot = Rotation(self._scene_templates.blackmarket_mask.target_pos - l_pos, math.UP)
 	local l1_pos = l_pos + rot:x() * 50 + rot:y() * 50
@@ -352,7 +355,7 @@ function MenuSceneManager:_set_up_templates()
 	self._scene_templates.inventory.lobby_characters_visible = false
 	self._scene_templates.inventory.hide_menu_logo = true
 	self._scene_templates.inventory.camera_pos = ref:position()
-	self._scene_templates.inventory.target_pos = target_pos - self._camera_start_rot:x() * 40 - self._camera_start_rot:z() * 5
+	self._scene_templates.inventory.target_pos = target_pos - self._camera_start_rot:x() * 60 - self._camera_start_rot:z() * 7.5
 	self._scene_templates.inventory.character_pos = c_ref:position()
 	self._scene_templates.inventory.remove_infamy_card = true
 	self._scene_templates.blackmarket_crafting = {}

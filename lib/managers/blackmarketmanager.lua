@@ -4442,7 +4442,7 @@ function BlackMarketManager:tradable_add_item(instance_id, category, entry, qual
 		if item.category ~= category or item.entry ~= entry then
 		end
 		item.amount = amount
-	elseif category and entry and amount and category and entry and amount ~= "nil" and entry ~= "nil" and category ~= "nil" and (bonus == nil or type(bonus) == "boolean") then
+	elseif category and entry and amount and amount ~= "nil" and entry ~= "nil" and category ~= "nil" and (bonus == nil or type(bonus) == "boolean") then
 		self._global.inventory_tradable[instance_id] = {
 			category = category,
 			entry = entry,
@@ -5661,16 +5661,4 @@ function BlackMarketManager:check_frog_1()
 	end
 	managers.job:set_memory("frog_1", false)
 	return false
-end
-function BlackMarketManager:debug_inventory()
-	local t = {}
-	for gv, cat in pairs(self._global.inventory) do
-		for type, entry in pairs(cat) do
-			t[type] = t[type] or {amount = 0}
-			for name, amount in pairs(entry) do
-				t[type].amount = t[type].amount + amount
-			end
-		end
-	end
-	print(inspect(t))
 end

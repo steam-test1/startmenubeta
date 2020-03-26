@@ -687,6 +687,7 @@ function TweakData:init()
 	self.screen_colors.heat_warm_color = Color("ff7f00")
 	self.screen_colors.heat_standard_color = Color(255, 255, 255, 255) / 255
 	self.screen_colors.heat_color = self.screen_colors.heat_standard_color
+	self.screen_colors.challenge_title = Color(255, 255, 168, 0) / 255
 	self.screen_colors.stats_positive = Color(255, 191, 221, 125) / 255
 	self.screen_colors.stats_negative = Color(255, 254, 93, 99) / 255
 	self.screen_colors.stats_mods = Color(255, 229, 229, 76) / 255
@@ -978,9 +979,11 @@ Play the full version soon to get your full PAYDAY!]],
 	self.materials[Idstring("tile"):key()] = "tile"
 	self.materials[Idstring("water_deep"):key()] = "water_deep"
 	self.materials[Idstring("water_puddle"):key()] = "water_puddle"
-	self.materials[Idstring("water_shallow"):key()] = "water_shallow"
+	self.materials[Idstring("water_shallow"):key()] = "water_puddle"
 	self.materials[Idstring("shield"):key()] = "shield"
 	self.materials[Idstring("heavy_swat_steel_no_decal"):key()] = "shield"
+	self.materials[Idstring("snow"):key()] = "snow"
+	self.materials[Idstring("ice"):key()] = "ice_thick"
 	self.screen = {}
 	self.screen.fadein_delay = 1
 	self.experience_manager = {}
@@ -1040,6 +1043,7 @@ Play the full version soon to get your full PAYDAY!]],
 		1.2,
 		1.3
 	}
+	self.experience_manager.alive_humans_multiplier[0] = 1
 	self.experience_manager.limited_bonus_multiplier = 1
 	self.experience_manager.level_limit = {}
 	self.experience_manager.level_limit.low_cap_level = -1
@@ -2258,6 +2262,7 @@ Play the full version soon to get your full PAYDAY!]],
 		modern_ninja = {
 			award = "ovk_2",
 			job = "kosugi",
+			stealth = true,
 			equipped = {
 				primaries = {weapon_id = "m134"},
 				secondaries = {weapon_id = "rpg7"}
@@ -2509,7 +2514,14 @@ Play the full version soon to get your full PAYDAY!]],
 			difficulty = {
 				"overkill_290"
 			},
-			jobs = {"peta", "peta_prof"}
+			jobs = {"peta"}
+		},
+		death_peta_prof = {
+			award = "peta_1_prof",
+			difficulty = {
+				"overkill_290"
+			},
+			jobs = {"peta_prof"}
 		},
 		death_pal = {
 			award = "pal_1",
@@ -3929,6 +3941,9 @@ Play the full version soon to get your full PAYDAY!]],
 	self.projectiles.launcher_incendiary.burn_duration = 6
 	self.projectiles.launcher_incendiary.burn_tick_period = 0.5
 	self.projectiles.launcher_frag_m32 = deep_clone(self.projectiles.launcher_frag)
+	self.projectiles.launcher_incendiary_m32 = deep_clone(self.projectiles.launcher_incendiary)
+	self.projectiles.launcher_frag_china = deep_clone(self.projectiles.launcher_frag)
+	self.projectiles.launcher_incendiary_china = deep_clone(self.projectiles.launcher_incendiary)
 	self.projectiles.rocket_frag = {}
 	self.projectiles.rocket_frag.launch_speed = 2500
 	self.projectiles.rocket_frag.adjust_z = 0

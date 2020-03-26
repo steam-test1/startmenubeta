@@ -1850,6 +1850,9 @@ function HuskPlayerMovement:_adjust_walk_anim_speed(dt, target_speed)
 	end
 end
 function HuskPlayerMovement:sync_shot_blank(impact)
+-- fail 35
+null
+6
 	if self._state == "mask_off" or self._state == "clean" or self._state == "civilian" then
 		return
 	end
